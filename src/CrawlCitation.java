@@ -74,14 +74,14 @@ public class CrawlCitation  {
 		 String regEx_img = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?<span.*?class=\"en_data_bold\">\\s*([0-9]+?)\\s*</span>"; 
 		 pattern = Pattern.compile(regEx_img,Pattern.CASE_INSENSITIVE);   
 		 matcher = pattern.matcher(htmlStr); 
-		 //  
+		 // 返回文獻列表
 		 while(matcher.find()){   
 			 img = img + "," + matcher.group();
 			 int citation = Integer.parseInt(matcher.group(2));
 			 String titleinwos = matcher.group(1).replaceAll("<span class=\"hitHilite\">", " ")
 					 .replaceAll("</span>", "").replaceAll("[\\t\\n\\r]", "")
 					 .replaceAll("\\s{2,}", " ").trim();
-			 // title    titleinwo 
+			 // title 與 titleinwos 相似度大於90%，則認為相同
 			 String raw_title = Util.processStr(title);
 			 String pagecontent_title = Util.processStr(titleinwos);
 			 if(Util.getLevenshteinDistance(raw_title, pagecontent_title) < 10) {
@@ -91,7 +91,7 @@ public class CrawlCitation  {
 				 break;
 			 }
          }
-		 //  
+		 // 返回文獻列表有數字的樣式：可能是真確文獻，可能是錯誤
 		 if (numlist.size() <= 0) {
 			 String regEx = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?<a.*?>\\s*([0-9]+?)\\s*</a>"; 
 			 Pattern pattern1 = Pattern.compile(regEx, Pattern.CASE_INSENSITIVE);   
@@ -102,7 +102,7 @@ public class CrawlCitation  {
 				 String titleinwos = matcher1.group(1).replaceAll("<span class=\"hitHilite\">", " ")
 						 .replaceAll("</span>", "").replaceAll("[\\t\\n\\r]", "")
 						 .replaceAll("\\s{2,}", " ").trim();
-				 // title  titleinwos  
+				 // title 與 titleinwos 相似度大於90%，則認為相同
 				 String raw_title = Util.processStr(title);
 				 String pagecontent_title = Util.processStr(titleinwos);
 				 if(Util.getLevenshteinDistance(raw_title, pagecontent_title) < 10) {
