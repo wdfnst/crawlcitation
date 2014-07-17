@@ -15,24 +15,24 @@ import com.mysql.jdbc.Statement;
 public class MySQLDao {
 	
 	static {
-		// ¼ÓÔØÇý¶¯³ÌÐò
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			System.out.println("Çý¶¯¼ÓÔØÊ§°Ü");
+			System.out.println("ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½");
 		}
 	}
-	// Êý¾Ý¿âÁ¬½Ó×Ö·û´®
+	// ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½
 	private String url = "jdbc:mysql://localhost:3306/jzusdb";
-	// ÓÃ»§Ãû
+	// ï¿½Ã»ï¿½ï¿½ï¿½
 	private String userName = "jzus";
-	// ÃÜÂë
+	// ï¿½ï¿½ï¿½ï¿½
 	private String passWord = "mzxwswws";
-	// Á¬½Ó¶ÔÏó
+	// ï¿½ï¿½ï¿½Ó¶ï¿½ï¿½ï¿½
 	public Connection con = null;
-	// Óï¾ä¶ÔÏó
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	public PreparedStatement ps = null;
 	private String insert_uni_sql = "INSERT INTO `jzusdb`.`university` (`id`, `name`, `url`, `location`, `Region`, `mapurl`, `worldrank`, `intro`, `Overallscore`, `Teaching`, `Internationaloutlook`, `Industryincome`, `Research`, `Citations`) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 	private String insert_pageinfo_sql = "INSERT INTO  `jzusdb`.`pageinfo` (" + 
@@ -52,7 +52,7 @@ public class MySQLDao {
 	
 	private String update_isindexbywos = "UPDATE `jzusdb`.`articlecitation` SET  isindexbywos=? WHERE `articlecitation`.`DOI` =  ?;";
 	
-	// Êý¾Ý¿âÁ¬½Ó·½·¨
+	// ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½Ó·ï¿½ï¿½ï¿½
 	public void prepareConnection() {
 		try {
 			if (con == null || con.isClosed()) {
@@ -61,11 +61,11 @@ public class MySQLDao {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			throw new RuntimeException("Á¬½ÓÒì³£:" + e.getMessage());
+			throw new RuntimeException("ï¿½ï¿½ï¿½ï¿½ï¿½ì³£:" + e.getMessage());
 		}
 	}
 
-	// ¹Ø±Õ·½·¨
+	// ï¿½Ø±Õ·ï¿½ï¿½ï¿½
 	public void close() {
 		try {
 			if (ps != null) {
@@ -77,17 +77,17 @@ public class MySQLDao {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			throw new RuntimeException("¹Ø±ÕÁ¬½ÓÒì³£:" + e.getMessage());
+			throw new RuntimeException("ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì³£:" + e.getMessage());
 		}
 	}
 
-	// ²Ù×÷»Ø¹ö
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½
 	public void rollback() {
 		try {
 			con.rollback();
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new RuntimeException("»Ø¹öÊ§°Ü:" + e.getMessage());
+			throw new RuntimeException("ï¿½Ø¹ï¿½Ê§ï¿½ï¿½:" + e.getMessage());
 		}
 	}
 	
@@ -175,7 +175,10 @@ public class MySQLDao {
 		Map<String, String> title_doi = new HashMap<String, String>();
 		//String sql = "select DOI, title from jzusdb.articlecitation where itemtitleinwos is null and isindexbywos<=0;";
 		//String sql = "SELECT DOI, title FROM  `articlecitation` WHERE  `citationinwos` >0 AND  `isindexbywos` =0";
-		String sql = "SELECT DOI, title FROM  `articlecitation`where 1";
+		// select all the records in article
+		//String sql = "SELECT DOI, title FROM  `articlecitation`where 1";
+		// selct the articles in SCI
+		String sql = "SELECT * FROM `article_forcitation` WHERE doi in (select doi from paper_forcitation where volume > 8);";
 		try {
 			prepareConnection();
 			ps = con.prepareStatement(sql);

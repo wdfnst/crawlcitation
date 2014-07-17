@@ -1,9 +1,13 @@
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +25,7 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import org.openqa.selenium.internal.seleniumemulation.Open;
 import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
@@ -31,8 +36,19 @@ public class CrawlCitation  {
 	public static Map<String, String> doi_title = mysqldao.selectTitleDOI();
 	public static WebDriver driver = null; 
 
-    public static void main(String[] args) throws FileNotFoundException, UnsupportedEncodingException, InterruptedException {
+    public static File tofile = new File("temp/citation_" + (new Date()).getTime() + ".xml");
+    public static FileWriter fw;
+    public static BufferedWriter buffw;
+    public static PrintWriter pw;
 
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+
+    	fw = new FileWriter(tofile);
+    	buffw = new BufferedWriter(fw);
+    	pw = new PrintWriter(buffw);
+    	pw.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<citations>");
+        
     	Set<String> key = doi_title.keySet();
     	int i = 1;
     	int literlen = key.size();
@@ -45,14 +61,29 @@ public class CrawlCitation  {
             i++;
         }
         mysqldao.close();
+
+        pw.println("</citations>");
+        pw.close();
+        buffw.close();
+        fw.close();
     }
     
+    // instance htmlunitdriver and request html source code
     public static void getWebpageCitation(String doi, String title) {
     	driver = new HtmlUnitDriver();
-    	driver.get("http://apps.webofknowledge.com/");
+    	//driver.get("http://apps.webofknowledge.com/");
+    	driver.get("http://apps.webofknowledge.com/WOS_GeneralSearch_input.do?product=WOS&search_mode=GeneralSearch");
         WebElement element = driver.findElement(By.id("value(input1)"));
         //element.sendKeys("A wavelet packet based method for adaptive single-pole auto-reclosing");
-        element.sendKeys(title.replaceAll("<.*?>", "").replaceAll("&.*?;", " ").replaceAll("[\u4E00-\u9FA5]+.*?$", " "));
+        //element.sendKeys(title.replaceAll("<.*?>", "").replaceAll("&.*?;", " ").replaceAll("[\u4E00-\u9FA5]+.*?$", " "));
+        element.clear();
+        element.sendKeys(doi);
+        //銆�Search by doi
+        Select searchField = new Select(driver.findElement(By.name("value(select1)")));
+        searchField.selectByValue("DO");
+        // click the content inputed
+//        WebElement delelement = driver.findElement(By.id("clearIcon1"));
+//        delelement.click();
         element.submit();
 
         long end = System.currentTimeMillis() + 10000;
@@ -62,36 +93,63 @@ public class CrawlCitation  {
             List<Integer> citationlist = getArticleItem(doi, contentofhtml, title);
             if (citationlist.size() > 0)break;
         }
+        /*
+        File tofile1 = new File("temp/" + doi.substring(9) + ".txt");
+        FileWriter fw1;
+		try {
+			fw1 = new FileWriter(tofile1);
+	        BufferedWriter buffw1 = new BufferedWriter(fw1);
+	        PrintWriter pw1 = new PrintWriter(buffw1);
+	        pw1.println(driver.getPageSource());
+	        pw1.flush();
+	        pw1.close();
+	        buffw1.close();
+	        fw1.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+    	*/
         driver.quit();
     }
     
     public static List<Integer> getArticleItem(String doi, String htmlStr, String title){
 		 String img="";   
 		 Pattern pattern;   
-		 Matcher matcher;   
+		 Matcher matcher;
 		 List<Integer> numlist = new ArrayList<Integer>();
 		
-		 String regEx_img = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?<span.*?class=\"en_data_bold\">\\s*([0-9]+?)\\s*</span>"; 
+		 //String regEx_img = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?<span.*?class=\"en_data_bold\">\\s*([0-9]+?)\\s*</span>";
+		 String regEx_img = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?Cited:[.\\n\\s\\S]*?(<a.*?>){0,1}\\s*([0-9]+)\\s*[.\\n\\s\\S]*?</a>{0,1}";
 		 pattern = Pattern.compile(regEx_img,Pattern.CASE_INSENSITIVE);   
 		 matcher = pattern.matcher(htmlStr); 
-		 // 返回文獻列表
+		 // 
+		 String titleinwos = "";
 		 while(matcher.find()){   
 			 img = img + "," + matcher.group();
-			 int citation = Integer.parseInt(matcher.group(2));
-			 String titleinwos = matcher.group(1).replaceAll("<span class=\"hitHilite\">", " ")
+			 int citation = Integer.parseInt(matcher.group(3));
+			 titleinwos = matcher.group(1).replaceAll("<span class=\"hitHilite\">", " ")
 					 .replaceAll("</span>", "").replaceAll("[\\t\\n\\r]", "")
 					 .replaceAll("\\s{2,}", " ").trim();
-			 // title 與 titleinwos 相似度大於90%，則認為相同
+			 // 
 			 String raw_title = Util.processStr(title);
 			 String pagecontent_title = Util.processStr(titleinwos);
 			 if(Util.getLevenshteinDistance(raw_title, pagecontent_title) < 10) {
-				 System.out.println(citation + "  " + titleinwos);
-				 numlist.add(Integer.parseInt(matcher.group(2)));
-				 mysqldao.updatecitationwos(titleinwos, citation, doi);
-				 break;
+				 numlist.add(Integer.parseInt(matcher.group(3)));
+//				 break;
 			 }
          }
-		 // 返回文獻列表有數字的樣式：可能是真確文獻，可能是錯誤
+		 // if find more than one result, add the number of citation in each result
+		 if (numlist.size() >= 1) {
+			 int sum = 0;
+			 for (int num : numlist)
+			 	sum += num;
+			 System.out.println(sum + "  " + titleinwos);
+			 pw.println("\t<citation>\n\t\t<doi>" + doi + "</doi>\n\t\t<times>" + sum + "</times>\n\t</citation>");
+			 pw.flush();
+			 mysqldao.updatecitationwos(titleinwos, sum, doi);
+			 
+		 }
+		 /*
 		 if (numlist.size() <= 0) {
 			 String regEx = "<value lang_id=\"\">([.\\n\\s\\S]*?)</value>[.\\n\\s\\S]*?<a.*?>\\s*([0-9]+?)\\s*</a>"; 
 			 Pattern pattern1 = Pattern.compile(regEx, Pattern.CASE_INSENSITIVE);   
@@ -99,10 +157,10 @@ public class CrawlCitation  {
 			 while(matcher1.find()){   
 				 img = img + "," + matcher1.group();
 				 int citation = Integer.parseInt(matcher1.group(2));
-				 String titleinwos = matcher1.group(1).replaceAll("<span class=\"hitHilite\">", " ")
+				 titleinwos = matcher1.group(1).replaceAll("<span class=\"hitHilite\">", " ")
 						 .replaceAll("</span>", "").replaceAll("[\\t\\n\\r]", "")
 						 .replaceAll("\\s{2,}", " ").trim();
-				 // title 與 titleinwos 相似度大於90%，則認為相同
+				 //  
 				 String raw_title = Util.processStr(title);
 				 String pagecontent_title = Util.processStr(titleinwos);
 				 if(Util.getLevenshteinDistance(raw_title, pagecontent_title) < 10) {
@@ -113,6 +171,7 @@ public class CrawlCitation  {
 				 }
 	         }
 		 }
+		 */
 		 return numlist;   
      }
 }
